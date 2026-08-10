@@ -97,7 +97,7 @@ struct HitWin {
 constexpr int kPaySymCount = 11; // WW .. L5
 constexpr int kOakCount = 3;     // 3, 4, 5
 constexpr int kCoinValueCount = 5;
-constexpr int kFillBandCount = 3; // <1/3, 1/3–2/3, ≥2/3
+constexpr int kFillBandCount = 6; // 0–2, 3–5, 6–8, 9–11, 12–14, 15
 constexpr int kJpCount = 4;       // MINI, MINOR, MAJOR, GRAND
 constexpr int kCumBandCount = 7;  // <1, >=1, >=1.5, >=2, >=3, >=5, >=10
 constexpr int kWinRangeCount = 20;
@@ -130,16 +130,19 @@ inline double coinValueAt(int i) {
   return vals[i];
 }
 
-/** Locked-cell fill band on a 15-cell board: 0=<5, 1=5–9, 2=10–15. */
+/** Locked-cell fill band on a 15-cell board (strict coin count). */
 inline int fillBand(int lockedCount) {
-  if (lockedCount < 5) return 0;
-  if (lockedCount < 10) return 1;
-  return 2;
+  if (lockedCount <= 2) return 0;  // 0–2
+  if (lockedCount <= 5) return 1;  // 3–5
+  if (lockedCount <= 8) return 2;  // 6–8
+  if (lockedCount <= 11) return 3; // 9–11
+  if (lockedCount <= 14) return 4; // 12–14
+  return 5;                       // 15
 }
 
 inline const char* fillBandName(int b) {
   static const char* names[kFillBandCount] = {
-    "0-1/3 (<5)", "1/3-2/3 (5-9)", "2/3-full (10-15)"
+    "0-2", "3-5", "6-8", "9-11", "12-14", "15"
   };
   if (b < 0 || b >= kFillBandCount) return "?";
   return names[b];

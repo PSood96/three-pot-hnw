@@ -54,7 +54,15 @@ Configs live in `.vscode/` (`tasks.json`, `launch.json`, `c_cpp_properties.json`
 
 ## Output
 
-Report includes RTP %, mean × bet, hit rate, feature rate, pot-use / tier hits, cumulative and discrete win bands (odds / avg / RTP), and runtime.
+Progress logs go to **stderr**. The final report is **CSV on stdout** (easy to redirect):
+
+```bash
+./bin/threepot_sim --mode main --spins 1000000 --seed 42 > stats.csv
+```
+
+Columns: `section,label,hits,odds_pct,avg_x,rtp_pct`
+
+Sections include `summary`, `win_cum`, `win_range`, `line`, `coin_count` / `coin_value` / `coin_type`, `hw_fill`, and `jp`. For jackpot rows, `avg_x` holds odds-per-feature % (spin odds stay in `odds_pct`).
 
 ## Layout
 

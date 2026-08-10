@@ -41,7 +41,8 @@ static void printProgress(int pct, const Stats& st, double stake,
   double bonusRtp = st.staked > 0 ? 100.0 * st.fsWon / st.staked : 0.0;
   double hf = st.spins > 0 ? 100.0 * static_cast<double>(st.hits) / st.spins : 0.0;
 
-  std::cout << std::fixed << std::setprecision(2)
+  // Progress goes to stderr so stdout CSV stays clean for redirects.
+  std::cerr << std::fixed << std::setprecision(2)
             << "[" << std::setw(3) << pct << "%]"
             << "  elapsed=" << std::setprecision(1) << elapsed << "s"
             << "  spins=" << st.spins
@@ -73,7 +74,7 @@ SimReport runSim(const SimOptions& opts) {
     }
   };
 
-  std::cout << "Sim start  mode=" << modeName(opts.mode)
+  std::cerr << "Sim start  mode=" << modeName(opts.mode)
             << "  spins=" << total
             << "  seed=" << opts.seed
             << "  stake/spin=" << stake << "×\n"
@@ -139,133 +140,132 @@ SimReport runSim(const SimOptions& opts) {
   return r;
 }
 
-static void appendHitWinRow(std::ostringstream& o, const char* label,
+static void csvEscape(std::ostringstream& o, const std::string& s) {
+  bool needQuotes = s.find_first_of(",\"\n\r") != std::string::npos;
+  if (!needQuotes) {
+    o << s;
+    return;
+  }
+  o << '"';
+  for (char c : s) {
+    if (c == '"') o << "\"\"";
+    else o << c;
+  }
+  o << '"';
+}
+
+static void appendCsvRow(std::ostringstream& o, const char* section, const std::string& label,
+                         long long hits, double oddsPct, double avgX, double rtpPct) {
+  o << section << ',';
+  csvEscape(o, label);
+  o << ',' << hits
+    << ',' << std::fixed << std::setprecision(6) << oddsPct
+    << ',' << std::setprecision(6) << avgX
+    << ',' << std::setprecision(6) << rtpPct
+    << '\n';
+}
+
+static void appendHitWinCsv(std::ostringstream& o, const char* section, const char* label,
                             const HitWin& h, long long denomSpins, double staked) {
   double odds = denomSpins > 0 ? 100.0 * static_cast<double>(h.hits) / denomSpins : 0.0;
   double rtp = staked > 0 ? 100.0 * h.won / staked : 0.0;
   double avgX = h.hits > 0 ? (h.won / BET) / h.hits : 0.0;
-  o << "  " << std::left << std::setw(28) << label << std::right
-    << "  hits=" << std::setw(10) << h.hits
-    << "  odds=" << std::setw(8) << std::setprecision(4) << odds << "%"
-    << "  avg=" << std::setw(10) << std::setprecision(2) << avgX << "×"
-    << "  RTP=" << std::setw(8) << std::setprecision(3) << rtp << "%\n";
+  appendCsvRow(o, section, label, h.hits, odds, avgX, rtp);
 }
 
 std::string formatReport(const SimReport& r) {
   const Stats& st = r.detail;
-  std::ostringstream o;
-  o << std::fixed;
-  o << "=== 3-Pot Hold & Win Sim — final ===\n";
-  o << std::setprecision(2);
-  o << "mode=" << modeName(r.mode)
-    << "  spins=" << r.spins
-    << "  stake/spin=" << r.stakePerSpin << "×\n";
-  o << "staked=" << r.staked
-    << "  won=" << r.totalWon
-    << "  (base=" << r.baseWon << "  feature=" << r.fsWon << ")\n";
+  std::ostringstream out;
+  out << "section,label,hits,odds_pct,avg_x,rtp_pct\n";
+
   double baseRtp = r.staked > 0 ? 100.0 * r.baseWon / r.staked : 0.0;
   double bonusRtp = r.staked > 0 ? 100.0 * r.fsWon / r.staked : 0.0;
-  o << std::setprecision(3);
-  o << "Total RTP=" << (100.0 * r.rtp) << "%"
-    << "  Base RTP=" << baseRtp << "%"
-    << "  Bonus RTP=" << bonusRtp << "%"
-    << "  HF=" << (100.0 * r.hitRate) << "%"
-    << "  feature=" << (100.0 * r.featureRate) << "%\n";
-  o << "mean=" << r.meanX << "×\n";
-  o << std::setprecision(2);
-  o << "best=" << r.bestX << "×  biggestFeat=" << r.biggestFeatX << "×\n";
-  o << "potUse SC1=" << r.potUse[0] << " SC2=" << r.potUse[1] << " SC3=" << r.potUse[2] << "\n";
-  o << "tierHits 1=" << r.tierHits[1] << " 2=" << r.tierHits[2] << " 3=" << r.tierHits[3] << "\n";
 
-  // --- Cumulative win thresholds ---
-  o << "\n--- Win bands (cumulative thresholds) — odds / avg win / RTP ---\n";
+  appendCsvRow(out, "summary", std::string("mode=") + modeName(r.mode), r.spins, 0.0, r.stakePerSpin, 100.0 * r.rtp);
+  appendCsvRow(out, "summary", "spins", r.spins, 0.0, 0.0, 0.0);
+  appendCsvRow(out, "summary", "stake_per_spin", 0, 0.0, r.stakePerSpin, 0.0);
+  appendCsvRow(out, "summary", "staked", 0, 0.0, r.staked, 0.0);
+  appendCsvRow(out, "summary", "total_won", 0, 0.0, r.totalWon, 0.0);
+  appendCsvRow(out, "summary", "base_won", 0, 0.0, r.baseWon, 0.0);
+  appendCsvRow(out, "summary", "feature_won", 0, 0.0, r.fsWon, 0.0);
+  appendCsvRow(out, "summary", "total_rtp_pct", 0, 0.0, 0.0, 100.0 * r.rtp);
+  appendCsvRow(out, "summary", "base_rtp_pct", 0, 0.0, 0.0, baseRtp);
+  appendCsvRow(out, "summary", "bonus_rtp_pct", 0, 0.0, 0.0, bonusRtp);
+  appendCsvRow(out, "summary", "hit_freq_pct", 0, 100.0 * r.hitRate, 0.0, 0.0);
+  appendCsvRow(out, "summary", "feature_rate_pct", 0, 100.0 * r.featureRate, 0.0, 0.0);
+  appendCsvRow(out, "summary", "mean_x", 0, 0.0, r.meanX, 0.0);
+  appendCsvRow(out, "summary", "best_x", 0, 0.0, r.bestX, 0.0);
+  appendCsvRow(out, "summary", "biggest_feat_x", 0, 0.0, r.biggestFeatX, 0.0);
+  appendCsvRow(out, "summary", "pot_use_SC1", r.potUse[0], 0.0, 0.0, 0.0);
+  appendCsvRow(out, "summary", "pot_use_SC2", r.potUse[1], 0.0, 0.0, 0.0);
+  appendCsvRow(out, "summary", "pot_use_SC3", r.potUse[2], 0.0, 0.0, 0.0);
+  appendCsvRow(out, "summary", "tier_hits_1", r.tierHits[1], 0.0, 0.0, 0.0);
+  appendCsvRow(out, "summary", "tier_hits_2", r.tierHits[2], 0.0, 0.0, 0.0);
+  appendCsvRow(out, "summary", "tier_hits_3", r.tierHits[3], 0.0, 0.0, 0.0);
+  appendCsvRow(out, "summary", "runtime_s", 0, 0.0, r.seconds, 0.0);
+  appendCsvRow(out, "summary", "spins_per_s", 0, 0.0, r.seconds > 0 ? r.spins / r.seconds : 0.0, 0.0);
+
   for (int i = 0; i < kCumBandCount; ++i)
-    appendHitWinRow(o, cumBandName(i), st.cumBand[i], r.spins, r.staked);
+    appendHitWinCsv(out, "win_cum", cumBandName(i), st.cumBand[i], r.spins, r.staked);
 
-  // --- Discrete win ranges ---
-  o << "\n--- Win ranges (discrete) — odds / avg win / RTP ---\n";
   for (int i = 0; i < kWinRangeCount; ++i)
-    appendHitWinRow(o, winRangeName(i), st.winRange[i], r.spins, r.staked);
+    appendHitWinCsv(out, "win_range", winRangeName(i), st.winRange[i], r.spins, r.staked);
 
-  // --- Line symbol × OAK ---
-  o << "\n--- Base lines (symbol × OAK) — odds per spin, RTP vs stake ---\n";
-  o << std::setprecision(2);
-  double lineRtp = r.staked > 0 ? 100.0 * st.lineWon / r.staked : 0.0;
-  o << "  line total won=" << st.lineWon << "  RTP=" << std::setprecision(3) << lineRtp << "%\n";
   for (int si = 0; si < kPaySymCount; ++si) {
     for (int oi = 0; oi < kOakCount; ++oi) {
-      const HitWin& h = st.lineSymOak[si][oi];
-      if (h.hits == 0 && h.won == 0.0) continue;
       std::ostringstream label;
       label << paySymName(si) << " " << (oi + 3) << "oak";
-      appendHitWinRow(o, label.str().c_str(), h, r.spins, r.staked);
+      appendHitWinCsv(out, "line", label.str().c_str(), st.lineSymOak[si][oi], r.spins, r.staked);
     }
   }
+  appendCsvRow(out, "line", "line_total", 0, 0.0, st.lineWon,
+               r.staked > 0 ? 100.0 * st.lineWon / r.staked : 0.0);
 
-  // --- Coins ---
-  o << "\n--- Base coins — by count (odds = share of spins) ---\n";
-  double coinRtp = r.staked > 0 ? 100.0 * st.coinWon / r.staked : 0.0;
-  o << std::setprecision(2);
-  o << "  coin total won=" << st.coinWon << "  RTP=" << std::setprecision(3) << coinRtp << "%\n";
   for (int n = 0; n <= 3; ++n) {
     std::ostringstream label;
     label << n << " coin" << (n == 1 ? "" : "s");
-    appendHitWinRow(o, label.str().c_str(), st.coinByCount[n], r.spins, r.staked);
+    appendHitWinCsv(out, "coin_count", label.str().c_str(), st.coinByCount[n], r.spins, r.staked);
   }
-  o << "--- Base coins — by face value (hits = lands; RTP includes combo multi share) ---\n";
   for (int vi = 0; vi < kCoinValueCount; ++vi) {
     std::ostringstream label;
-    label << std::fixed << std::setprecision(1) << coinValueAt(vi) << "× value";
-    appendHitWinRow(o, label.str().c_str(), st.coinByValue[vi], r.spins, r.staked);
+    label << std::fixed << std::setprecision(1) << coinValueAt(vi) << "x value";
+    appendHitWinCsv(out, "coin_value", label.str().c_str(), st.coinByValue[vi], r.spins, r.staked);
   }
-  o << "--- Base coins — by type ---\n";
   for (int ti = 0; ti < 3; ++ti) {
     std::ostringstream label;
     label << "SC" << (ti + 1);
-    appendHitWinRow(o, label.str().c_str(), st.coinByType[ti], r.spins, r.staked);
+    appendHitWinCsv(out, "coin_type", label.str().c_str(), st.coinByType[ti], r.spins, r.staked);
   }
+  appendCsvRow(out, "coin_count", "coin_total", 0, 0.0, st.coinWon,
+               r.staked > 0 ? 100.0 * st.coinWon / r.staked : 0.0);
 
-  // --- Bonus fill by pot ---
-  o << "\n--- Bonus fill by starting pot (board locked-count bands) ---\n";
-  o << "  (odds = boards in band / boards attributed to that starting pot;\n";
-  o << "   RTP share split evenly across starting pots on multi-pot entries)\n";
-  static const char* potNames[3] = {"Pot1 (SC1)", "Pot2 (SC2)", "Pot3 (SC3)"};
+  static const char* potNames[3] = {"Pot1_SC1", "Pot2_SC2", "Pot3_SC3"};
   for (int pi = 0; pi < 3; ++pi) {
     if (st.hwFeatByPot[pi] == 0 && st.hwBoardsByPot[pi] == 0) continue;
-    o << "  " << potNames[pi]
-      << "  features=" << st.hwFeatByPot[pi]
-      << "  boards=" << st.hwBoardsByPot[pi] << "\n";
+    appendCsvRow(out, "hw_fill", std::string(potNames[pi]) + "_features",
+                 st.hwFeatByPot[pi], 0.0, 0.0, 0.0);
+    appendCsvRow(out, "hw_fill", std::string(potNames[pi]) + "_boards",
+                 st.hwBoardsByPot[pi], 0.0, 0.0, 0.0);
     long long boardDenom = st.hwBoardsByPot[pi] > 0 ? st.hwBoardsByPot[pi] : 1;
     for (int b = 0; b < kFillBandCount; ++b) {
-      const HitWin& h = st.hwFillByPot[pi][b];
-      double odds = 100.0 * static_cast<double>(h.hits) / boardDenom;
-      double rtp = r.staked > 0 ? 100.0 * h.won / r.staked : 0.0;
-      o << "    " << std::left << std::setw(22) << fillBandName(b) << std::right
-        << "  hits=" << std::setw(8) << h.hits
-        << "  odds=" << std::setw(7) << std::setprecision(2) << odds << "%"
-        << "  RTP=" << std::setw(7) << std::setprecision(3) << rtp << "%\n";
+      std::ostringstream label;
+      label << potNames[pi] << "|" << fillBandName(b);
+      appendHitWinCsv(out, "hw_fill", label.str().c_str(), st.hwFillByPot[pi][b],
+                      boardDenom, r.staked);
     }
   }
 
-  // --- Jackpots ---
-  o << "\n--- Bonus jackpots (hits = locked JP cells; GRAND also counts full-board awards) ---\n";
   long long featDenom = st.fsTrig > 0 ? st.fsTrig : r.spins;
   for (int ji = 0; ji < kJpCount; ++ji) {
     const HitWin& h = st.jp[ji];
-    double oddsPerFeat = featDenom > 0 ? 100.0 * static_cast<double>(h.hits) / featDenom : 0.0;
     double oddsPerSpin = r.spins > 0 ? 100.0 * static_cast<double>(h.hits) / r.spins : 0.0;
+    double oddsPerFeat = featDenom > 0 ? 100.0 * static_cast<double>(h.hits) / featDenom : 0.0;
     double rtp = r.staked > 0 ? 100.0 * h.won / r.staked : 0.0;
-    o << "  " << std::left << std::setw(8) << jpName(ji) << std::right
-      << "  hits=" << std::setw(8) << h.hits
-      << "  odds/feat=" << std::setw(8) << std::setprecision(3) << oddsPerFeat << "%"
-      << "  odds/spin=" << std::setw(8) << oddsPerSpin << "%"
-      << "  RTP=" << std::setw(7) << rtp << "%\n";
+    // avg_x column carries odds_per_feat_pct for jackpots
+    appendCsvRow(out, "jp", jpName(ji), h.hits, oddsPerSpin, oddsPerFeat, rtp);
   }
 
-  o << "\n" << std::setprecision(3);
-  o << "runtime=" << r.seconds << "s"
-    << "  (" << (r.seconds > 0 ? r.spins / r.seconds : 0) << " spins/s)\n";
-  return o.str();
+  return out.str();
 }
 
 } // namespace threepot
