@@ -5,7 +5,7 @@ Standalone C++17 math simulator ported from the fast path in `../ThreePotHoldWin
 ## Build
 
 ```bash
-cd cpp
+cd three-pot-hnw
 make
 ```
 
@@ -17,14 +17,14 @@ make clean   # remove obj/ and bin/
 
 ## VS Code / Cursor
 
-1. **Open the `cpp` folder** as the workspace (`File → Open Folder…` → `NewGame_3PotIdea/cpp`).
+1. **Open the `three-pot-hnw` folder** as the workspace (`File → Open Folder…` → `NewGame_3PotIdea/three-pot-hnw`).
 2. Install recommended extensions when prompted (or install **C/C++** by Microsoft manually).
 3. **Build:** `Cmd+Shift+B` (runs `make`).
 4. **Run / debug:** open **Run and Debug** (`Cmd+Shift+D`), pick e.g. `Run: main (100k)`, press **F5**.
 
 Configs live in `.vscode/` (`tasks.json`, `launch.json`, `c_cpp_properties.json`).
 
-> Open the **`cpp`** folder itself (not the parent `NewGame_3PotIdea`), so `${workspaceFolder}` points at the Makefile.
+> Open the **`three-pot-hnw`** folder itself (not the parent `NewGame_3PotIdea`), so `${workspaceFolder}` points at the Makefile.
 
 ## Run
 
@@ -54,7 +54,7 @@ Configs live in `.vscode/` (`tasks.json`, `launch.json`, `c_cpp_properties.json`
 
 ## Output
 
-Report includes RTP %, mean × bet, hit rate, feature rate, pot-use / tier hits, win bands (0 / &lt;1 / &lt;5 / &lt;20 / &lt;100 / 100+), and runtime.
+Report includes RTP %, mean × bet, hit rate, feature rate, pot-use / tier hits, cumulative and discrete win bands (odds / avg / RTP), and runtime.
 
 ## Layout
 

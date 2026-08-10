@@ -1,0 +1,35 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run: main (100k)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin/threepot_sim",
+      "args": ["--mode", "main", "--spins", "100000", "--seed", "1"],
+      "cwd": "${workspaceFolder}",
+      "MIMode": "lldb",
+      "preLaunchTask": "build-debug"
+    },
+    {
+      "name": "Run: bb2 (25k)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin/threepot_sim",
+      "args": ["--mode", "bb2", "--spins", "25000", "--seed", "1"],
+      "cwd": "${workspaceFolder}",
+      "MIMode": "lldb",
+      "preLaunchTask": "build-debug"
+    },
+    {
+      "name": "Run: pot1 (25k)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin/threepot_sim",
+      "args": ["--mode", "pot1", "--spins", "25000", "--seed", "1"],
+      "cwd": "${workspaceFolder}",
+      "MIMode": "lldb",
+      "preLaunchTask": "build-debug"
+    }
+  ]
+}
