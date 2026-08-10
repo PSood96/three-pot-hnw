@@ -48,9 +48,9 @@ Configs live in `.vscode/` (`tasks.json`, `launch.json`, `c_cpp_properties.json`
 | Mode | Stake | Entry |
 |------|-------|--------|
 | `main` | 1× | Base game + natural Hold & Win (1/220) |
-| `bb1` | 80× | Bonus Buy 1 — equal ⅓ Pot1 / Pot2 / Pot3 |
+| `bb1` | 60× | Bonus Buy 1 — equal ⅓ Pot1 / Pot2 / Pot3 |
 | `bb2` | 200× | Bonus Buy 2 — all 3 pots (`fs2`) |
-| `pot1` / `pot2` / `pot3` | 80× | Single-pot buy (`fs1A` / `fs1B` / `fs1C`) |
+| `pot1` / `pot2` / `pot3` | 60× | Single-pot buy (`fs1A` / `fs1B` / `fs1C`) |
 
 ## Output
 
